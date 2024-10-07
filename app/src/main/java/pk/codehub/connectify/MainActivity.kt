@@ -1,5 +1,7 @@
 package pk.codehub.connectify
 
+import android.content.Context
+import android.content.SharedPreferences
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -23,7 +25,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import pk.codehub.connectify.ui.theme.ConnectifyTheme
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
+import pk.codehub.connectify.ui.screens.SignUpScreen
+import androidx.compose.runtime.LaunchedEffect
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -32,11 +39,27 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ConnectifyTheme {
-                WebRTCApp()
+//                WebRTCApp()
+                MyAppContent()
             }
         }
     }
 }
+
+
+@Composable
+fun MyAppContent() {
+    val navController = rememberNavController()
+    val startDestination = remember {
+        mutableStateOf("sign_up")
+    }
+
+
+    NavHost(navController = navController, startDestination = startDestination.value) {
+        composable("sign_up") { SignUpScreen(navController) }
+    }
+}
+
 
 @Composable
 fun WebRTCApp(viewModel: WebRTCViewModel = hiltViewModel()) {

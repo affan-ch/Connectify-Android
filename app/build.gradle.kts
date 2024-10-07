@@ -57,6 +57,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.androidx.runtime.livedata)
+    implementation(libs.androidx.ui.text.google.fonts)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -74,4 +75,7 @@ dependencies {
     kapt(libs.hilt.compiler)
     implementation (libs.androidx.hilt.navigation.compose)
     implementation (libs.kotlinx.serialization.json)
+    implementation (libs.androidx.material.icons.extended)
+    implementation (libs.okhttp)
+
 }
