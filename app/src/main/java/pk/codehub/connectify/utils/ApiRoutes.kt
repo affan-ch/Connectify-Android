@@ -1,4 +1,4 @@
-package pk.codehub.connectify
+package pk.codehub.connectify.utils
 
 object ApiRoutes {
     private const val BASE_URL = "http://192.168.100.224:8000"

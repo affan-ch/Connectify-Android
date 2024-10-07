@@ -1,7 +1,5 @@
 package pk.codehub.connectify
 
-import android.content.Context
-import android.content.SharedPreferences
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -28,9 +26,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.rememberNavController
 import dagger.hilt.android.AndroidEntryPoint
 import pk.codehub.connectify.ui.screens.SignUpScreen
+import pk.codehub.connectify.ui.screens.SignInScreen
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import pk.codehub.connectify.ui.screens.HomeScreen
+import pk.codehub.connectify.utils.DataStoreManager
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -51,12 +53,25 @@ class MainActivity : ComponentActivity() {
 fun MyAppContent() {
     val navController = rememberNavController()
     val startDestination = remember {
-        mutableStateOf("sign_up")
+        mutableStateOf("sign_in")
     }
 
+    val appContext = LocalContext.current.applicationContext
+
+    // Launch an effect to check if token exists in DataStore
+    LaunchedEffect(Unit) {
+        // Use DataStoreManager to get the token
+        DataStoreManager.getValue(appContext, "token", "").collect { token ->
+            if (token.isNotEmpty()) {
+                startDestination.value = "home"
+            }
+        }
+    }
 
     NavHost(navController = navController, startDestination = startDestination.value) {
+        composable("sign_in") { SignInScreen(navController) }
         composable("sign_up") { SignUpScreen(navController) }
+        composable("home") { HomeScreen(navController) }
     }
 }
 

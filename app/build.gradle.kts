@@ -58,6 +58,7 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation(libs.androidx.runtime.livedata)
     implementation(libs.androidx.ui.text.google.fonts)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -77,5 +78,8 @@ dependencies {
     implementation (libs.kotlinx.serialization.json)
     implementation (libs.androidx.material.icons.extended)
     implementation (libs.okhttp)
+    implementation(libs.androidx.datastore)
+    implementation(libs.androidx.datastore.preferences.core)
+    implementation (libs.androidx.datastore.preferences)
 
 }
