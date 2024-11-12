@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import pk.codehub.connectify.ui.screens.HomeScreen
+import pk.codehub.connectify.ui.screens.TfaVerifyScreen
 import pk.codehub.connectify.utils.DataStoreManager
 
 @AndroidEntryPoint
@@ -71,6 +72,7 @@ fun MyAppContent() {
     NavHost(navController = navController, startDestination = startDestination.value) {
         composable("sign_in") { SignInScreen(navController) }
         composable("sign_up") { SignUpScreen(navController) }
+        composable("tfa_verify") { TfaVerifyScreen(navController)  }
         composable("home") { HomeScreen(navController) }
     }
 }

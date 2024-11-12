@@ -82,5 +82,6 @@ dependencies {
     implementation(libs.androidx.datastore)
     implementation(libs.androidx.datastore.preferences.core)
     implementation (libs.androidx.datastore.preferences)
+    implementation (libs.socket.io.client)
 
 }

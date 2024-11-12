@@ -11,6 +11,7 @@ import pk.codehub.connectify.utils.ApiRoutes
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -20,45 +21,40 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 
 
-class SignInViewModel : ViewModel() {
-    private val _email = MutableStateFlow("")
-    val email: StateFlow<String> = _email
-
-    private val _password = MutableStateFlow("")
-    val password: StateFlow<String> = _password
+class TfaVerifyViewModel : ViewModel() {
+    private val _otp = MutableStateFlow("")
+    val otp: StateFlow<String> = _otp
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
-    fun onEmailChange(newEmail: String) {
-        _email.value = newEmail
+    fun onOtpChange(newEmail: String) {
+        _otp.value = newEmail
     }
 
-    fun onPasswordChange(newPassword: String) {
-        _password.value = newPassword
-    }
-
-    fun signIn(context: Context, navController: NavController) {
+    fun tfaVerify(context: Context, navController: NavController) {
         _isLoading.value = true
 
-        Log.d("SignInViewModel", "Email: ${_email.value}, Password: ${_password.value}")
+        Log.d("TfaVerifyViewModel", "Otp: ${_otp.value}")
 
         viewModelScope.launch {
+            val token = DataStoreManager.getValue(context, "token", "").first()
+            Log.d("TfaVerifyViewModel", "Token: $token")
             val responseData = withContext(Dispatchers.IO) {
                 val client = OkHttpClient()
                 val mediaType = "application/json".toMediaType()
 
                 val jsonObject = JSONObject().apply {
-                    put("email", _email.value)
-                    put("password", _password.value)
+                    put("otp", _otp.value)
                 }
 
                 val body = jsonObject.toString().toRequestBody(mediaType)
 
                 val request = Request.Builder()
-                    .url(ApiRoutes.LOGIN)
+                    .url(ApiRoutes.VERIFY_TFA)
                     .post(body)
                     .addHeader("Content-Type", "application/json")
+                    .addHeader("Authorization", token)
                     .build()
 
                 try {
@@ -72,35 +68,27 @@ class SignInViewModel : ViewModel() {
 
             val toastMessage = responseData ?: "No response from server"
             var toastDisplayMessage = "No response from server"
-            var token: String? = null
-            var isTfaEnabled: Boolean = false
+            var success = false
+            var newToken = ""
 
             try {
                 val jsonObject = JSONObject(toastMessage)
                 toastDisplayMessage = jsonObject.optString("message", "No message found")
-                isTfaEnabled = jsonObject.optBoolean("isTFAEnabled", false)
-                token = jsonObject.optString("token", null.toString())
+                success = jsonObject.optBoolean("success", false)
+                newToken = jsonObject.optString("token", "")
             } catch (e: Exception) {
                 e.printStackTrace()
             }
 
-            _email.value = ""
-            _password.value = ""
+            Toast.makeText(context, toastDisplayMessage, Toast.LENGTH_SHORT).show()
+
+            _otp.value = ""
             _isLoading.value = false
 
-            if(!isTfaEnabled){
-                Toast.makeText(context, "Login to Desktop app first!!", Toast.LENGTH_SHORT).show()
+            if (success) {
+                DataStoreManager.saveValue(context, "token", newToken)
+                navController.navigate("home")
             }
-            else{
-                Toast.makeText(context, toastDisplayMessage, Toast.LENGTH_SHORT).show()
-
-                if (toastDisplayMessage == "User Login successfully!" && token != null) {
-                    DataStoreManager.saveValue(context, "token", token)
-                    navController.navigate("tfa_verify")
-                }
-            }
-
-
         }
     }
 
