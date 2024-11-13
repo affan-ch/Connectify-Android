@@ -1,19 +1,45 @@
 package pk.codehub.connectify.ui.screens
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.outlined.Send
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.googlefonts.Font
 import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.rememberNavController
 import pk.codehub.connectify.R
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
 
 @Composable
-fun HomeScreen(
-    navController: NavController
+fun HomeContent(
 ) {
 
     val provider = GoogleFont.Provider(
@@ -29,11 +55,99 @@ fun HomeScreen(
     )
 
     Text(
-        text = "Connectify",
-        fontSize = 35.sp,
+        text = "Connectify Home",
+        fontSize = 30.sp,
         fontFamily = fontFamily,
         textAlign = TextAlign.Center,
         color = MaterialTheme.colorScheme.primary,
         style = MaterialTheme.typography.bodyLarge
     )
+}
+
+
+@Composable
+fun HomeScreen() {
+    val navController = rememberNavController()
+    Scaffold(
+        bottomBar = { BottomNavigationBar(navController) }
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) { NavigationGraph(navController = navController) }
+    }
+}
+
+data class BottomNavItem(
+    val title: String,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector,
+    val route: String,
+    val hasNews: Boolean,
+    val badgeCount: Int? = null
+)
+
+@Composable
+fun BottomNavigationBar(navController: NavHostController) {
+    val items = listOf(
+        BottomNavItem("Home", Icons.Filled.Home, Icons.Outlined.Home, "home",false, null),
+        BottomNavItem("Chat", Icons.AutoMirrored.Filled.Send, Icons.AutoMirrored.Outlined.Send, "chat", true, 2 ),
+        BottomNavItem("Files", Icons.Filled.Folder, Icons.Outlined.Folder, "files", true, null),
+        BottomNavItem("Settings", Icons.Filled.Settings, Icons.Outlined.Settings, "settings",false, null)
+    )
+
+    var selectedItemIndex by rememberSaveable { mutableIntStateOf(0) }
+
+
+    NavigationBar {
+        items.forEachIndexed { index, item ->
+            NavigationBarItem(
+                icon = {
+                    BadgedBox(badge = {
+                        if (item.badgeCount != null) {
+                            Badge{
+                                Text(text = item.badgeCount.toString())
+                            }
+                        } else if (item.hasNews) {
+                            Badge()
+                        }
+                    }) {
+                        Icon(
+                            imageVector = if (selectedItemIndex == index) item.selectedIcon else item.unselectedIcon,
+                            contentDescription = item.title
+                        )
+                    }
+                },
+
+                label = {
+                    Text(
+                        text = item.title,
+                        fontSize = 12.sp
+                    )
+                },
+                selected = selectedItemIndex == index,
+                alwaysShowLabel = true,
+                onClick = {
+                    selectedItemIndex = index
+                    navController.navigate(item.route) {
+                        popUpTo(navController.graph.startDestinationId) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
+
+            )
+        }
+    }
+}
+
+
+
+@Composable
+fun NavigationGraph(navController: NavHostController) {
+    NavHost(navController, startDestination = "home") {
+        composable("home") { HomeContent() }
+        composable("chat") { ChatScreen() }
+        composable("files") { FileManagerScreen() }
+        composable("settings") { SettingsScreen() }
+    }
 }

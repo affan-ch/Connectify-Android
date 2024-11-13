@@ -73,7 +73,7 @@ fun MyAppContent() {
         composable("sign_in") { SignInScreen(navController) }
         composable("sign_up") { SignUpScreen(navController) }
         composable("tfa_verify") { TfaVerifyScreen(navController)  }
-        composable("home") { HomeScreen(navController) }
+        composable("home") { HomeScreen() }
     }
 }
 
