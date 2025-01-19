@@ -15,7 +15,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -33,7 +32,7 @@ import androidx.navigation.NavController
 import pk.codehub.connectify.R
 import pk.codehub.connectify.ui.components.MaterialTextField
 import pk.codehub.connectify.ui.components.PasswordFieldComponent
-import pk.codehub.connectify.viewmodel.SignInViewModel
+import pk.codehub.connectify.viewmodels.SignInViewModel
 
 
 @Composable

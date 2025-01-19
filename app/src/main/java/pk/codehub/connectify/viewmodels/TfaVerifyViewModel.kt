@@ -1,4 +1,4 @@
-package pk.codehub.connectify.viewmodel
+package pk.codehub.connectify.viewmodels
 
 import android.content.Context
 import pk.codehub.connectify.utils.DataStoreManager
@@ -19,6 +19,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import pk.codehub.connectify.utils.TokenManager
 
 
 class TfaVerifyViewModel : ViewModel() {
@@ -87,6 +88,7 @@ class TfaVerifyViewModel : ViewModel() {
 
             if (success) {
                 DataStoreManager.saveValue(context, "token", newToken)
+                TokenManager.registerDevice(context, newToken)
                 navController.navigate("home")
             }
         }

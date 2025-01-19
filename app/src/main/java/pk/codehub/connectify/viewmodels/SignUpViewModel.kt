@@ -1,4 +1,4 @@
-package pk.codehub.connectify.viewmodel
+package pk.codehub.connectify.viewmodels
 
 import android.content.Context
 import android.util.Log

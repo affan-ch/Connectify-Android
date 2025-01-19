@@ -27,7 +27,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import pk.codehub.connectify.R
 import pk.codehub.connectify.ui.components.MaterialTextField
-import pk.codehub.connectify.viewmodel.TfaVerifyViewModel
+import pk.codehub.connectify.viewmodels.TfaVerifyViewModel
 
 @Composable
 fun TfaVerifyScreen(

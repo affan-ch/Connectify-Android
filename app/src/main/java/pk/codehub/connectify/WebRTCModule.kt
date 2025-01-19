@@ -5,6 +5,7 @@ import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import pk.codehub.connectify.viewmodels.WebRTCViewModel
 import javax.inject.Singleton
 
 @Module

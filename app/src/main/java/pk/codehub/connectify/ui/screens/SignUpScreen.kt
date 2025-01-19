@@ -32,7 +32,7 @@ import androidx.navigation.NavController
 import pk.codehub.connectify.R
 import pk.codehub.connectify.ui.components.MaterialTextField
 import pk.codehub.connectify.ui.components.PasswordFieldComponent
-import pk.codehub.connectify.viewmodel.SignUpViewModel
+import pk.codehub.connectify.viewmodels.SignUpViewModel
 
 
 @Composable

@@ -1,21 +1,20 @@
-package pk.codehub.connectify
+package pk.codehub.connectify.viewmodels
 
 import android.app.Application
 import android.util.Log
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import org.json.JSONObject
 import org.webrtc.*
+import pk.codehub.connectify.models.Packet
+import pk.codehub.connectify.models.Sdp
 import java.nio.ByteBuffer
 import javax.inject.Inject
-
-@Serializable
-data class SDPMessage(val type: String, val sdp: String)
 
 @HiltViewModel
 class WebRTCViewModel @Inject constructor(
@@ -29,10 +28,22 @@ class WebRTCViewModel @Inject constructor(
     private val _answer = MutableLiveData<String>()
     val answer: LiveData<String> = _answer
 
-    private val _receivedMessages = MutableLiveData<List<String>>()
-    val receivedMessages: LiveData<List<String>> = _receivedMessages
+    private  val _state = MutableLiveData("disconnected")
+    val state: LiveData<String> = _state
 
-    private val messageList = mutableListOf<String>()
+    private val _receivedPackets = MutableLiveData<List<Packet>>()
+
+    private val _sentPackets = MutableLiveData<List<Packet>>()
+
+    val allMessages: LiveData<List<Packet>> = MediatorLiveData<List<Packet>>().apply {
+        addSource(_receivedPackets) { updateMessages() }
+        addSource(_sentPackets) { updateMessages() }
+    }
+
+    private fun updateMessages() {
+        val combinedMessages = (_receivedPackets.value ?: emptyList()) + (_sentPackets.value ?: emptyList())
+        (allMessages as MediatorLiveData).value = combinedMessages.sortedBy { it.timestamp }
+    }
 
     init {
         setupWebRTC()
@@ -50,7 +61,7 @@ class WebRTCViewModel @Inject constructor(
         // Setup ICE servers for connectivity
         val iceServers = listOf(
             PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
-            PeerConnection.IceServer.builder("turn:myturn.codehub.pk:3478?transport=udp")
+            PeerConnection.IceServer.builder("turn:68.183.132.84:3478?transport=udp")
                 .setUsername("myturnserveruser")
                 .setPassword("PaswordOfSomethingScary69")
                 .createIceServer()
@@ -72,7 +83,11 @@ class WebRTCViewModel @Inject constructor(
                 candidate?.let {
                     Log.i("WebRTCViewModel", "New ICE candidate: $candidate")
                     if (remotePeer?.localDescription != null) {
-                        Log.i("WebRTCViewModel", "SDP: ${Json.encodeToString(SDPMessage(remotePeer?.localDescription?.type?.name.toString(), remotePeer?.localDescription?.description.toString()))}")
+                        val sdp = Json.encodeToString(Sdp(remotePeer?.localDescription?.type?.name.toString(), remotePeer?.localDescription?.description.toString()))
+                        Log.i("WebRTCViewModel", "SDP: $sdp")
+
+                        // update the SDP answer with the ICE candidate
+                        _answer.postValue(sdp)
                     }
                 }
             }
@@ -106,6 +121,8 @@ class WebRTCViewModel @Inject constructor(
                 Log.i("WebRTCViewModel", "DataChannel state changed: ${dataChannel?.state()}")
                 if (dataChannel?.state() == DataChannel.State.OPEN) {
                     Log.i("WebRTCViewModel", "DataChannel is open and ready to send messages")
+                    // update the state to notify the UI
+                    _state.postValue("connected")
                 }
             }
 
@@ -115,21 +132,30 @@ class WebRTCViewModel @Inject constructor(
                     it.data.get(data)  // Read buffer into byte array
 
                     val message = String(data)  // Convert the byte array to a string
-                    messageList.add("Received: $message")
-                    _receivedMessages.postValue(messageList)
 
-                    Log.i("WebRTCViewModel", "Message received: $message")
+                    // opt type, content, timestamp, sender
+                    val messageJson = JSONObject(message)
+
+                    val type = messageJson.optString("type")
+                    val content = messageJson.optString("content")
+                    val timestamp = messageJson.optString("timestamp")
+                    val sender = messageJson.optString("sender")
+
+                    Log.d("WebRTCViewModel", "Received: type: $type, content: $content, timestamp: $timestamp, sender: $sender")
+
+                    val messageFormatted = Packet(type = type, content = content, timestamp = timestamp, sender = sender)
+
+                    _receivedPackets.postValue(_receivedPackets.value.orEmpty() + messageFormatted)
                 }
             }
         })
     }
 
-
     // Set the remote description from the offer received and create an answer
     fun setOfferFromJson(offerJson: String) {
         try {
             // Parse the JSON input to SDPMessage
-            val offerMessage = Json.decodeFromString<SDPMessage>(offerJson)
+            val offerMessage = Json.decodeFromString<Sdp>(offerJson)
             Log.i("WebRTCViewModel", "Offer received: $offerMessage")
 
             if (offerMessage.type == "offer") {
@@ -177,7 +203,7 @@ class WebRTCViewModel @Inject constructor(
                     remotePeer?.setLocalDescription(this, it)
 
                     // Create and send the SDP answer in JSON format
-                    val answerMessage = SDPMessage(type = "answer", sdp = it.description)
+                    val answerMessage = Sdp(type = "answer", sdp = it.description)
                     Log.i("WebRTCViewModel", "Answer created: $answerMessage")
                     _answer.postValue(Json.encodeToString(answerMessage))
                 }
@@ -197,13 +223,18 @@ class WebRTCViewModel @Inject constructor(
         }, mediaConstraints)
     }
 
-    // Send a message via DataChannel
-    fun sendMessage(message: String) {
+    // Send a packet via DataChannel
+    fun sendMessage(message: String, type: String) {
         if (dataChannel?.state() == DataChannel.State.OPEN) {
-            val buffer = DataChannel.Buffer(ByteBuffer.wrap(message.toByteArray()), false)
+
+            val reply = Packet(type = type, content = message, timestamp = System.currentTimeMillis()
+                .toString(), sender = "mobile")
+
+            val buffer = DataChannel.Buffer(ByteBuffer.wrap(Json.encodeToString(reply).toByteArray()), false)
             dataChannel?.send(buffer)
-            messageList.add("You: $message")
-            _receivedMessages.postValue(messageList)
+
+            _sentPackets.postValue(_sentPackets.value.orEmpty() + reply)
+
             Log.i("WebRTCViewModel", "Message sent: $message")
         } else {
             Log.i("WebRTCViewModel", "DataChannel is not open")

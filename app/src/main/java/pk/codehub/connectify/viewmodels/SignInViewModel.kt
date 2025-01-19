@@ -1,4 +1,4 @@
-package pk.codehub.connectify.viewmodel
+package pk.codehub.connectify.viewmodels
 
 import android.content.Context
 import pk.codehub.connectify.utils.DataStoreManager
@@ -73,7 +73,7 @@ class SignInViewModel : ViewModel() {
             val toastMessage = responseData ?: "No response from server"
             var toastDisplayMessage = "No response from server"
             var token: String? = null
-            var isTfaEnabled: Boolean = false
+            var isTfaEnabled = false
 
             try {
                 val jsonObject = JSONObject(toastMessage)
@@ -89,7 +89,9 @@ class SignInViewModel : ViewModel() {
             _isLoading.value = false
 
             if(!isTfaEnabled){
-                Toast.makeText(context, "Login to Desktop app first!!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Login to Desktop First !!", Toast.LENGTH_SHORT).show()
+                DataStoreManager.saveValue(context, "token", "")
+                DataStoreManager.saveValue(context, "deviceToken", "")
             }
             else{
                 Toast.makeText(context, toastDisplayMessage, Toast.LENGTH_SHORT).show()
