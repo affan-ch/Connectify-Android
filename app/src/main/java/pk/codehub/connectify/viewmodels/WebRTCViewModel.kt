@@ -71,13 +71,21 @@ class WebRTCViewModel @Inject constructor(
 
         // Initialize remotePeer for SDP exchange and Data Channel handling
         remotePeer = peerConnectionFactory?.createPeerConnection(rtcConfig, object : PeerConnection.Observer {
-            override fun onSignalingChange(p0: PeerConnection.SignalingState?) {}
+            override fun onSignalingChange(p0: PeerConnection.SignalingState?) {
+                Log.i("WebRTCViewModel", "Signaling state: $p0")
+            }
 
-            override fun onIceConnectionChange(p0: PeerConnection.IceConnectionState?) {}
+            override fun onIceConnectionChange(p0: PeerConnection.IceConnectionState?) {
+                Log.i("WebRTCViewModel", "ICE connection state: $p0")
+            }
 
-            override fun onIceConnectionReceivingChange(p0: Boolean) {}
+            override fun onIceConnectionReceivingChange(p0: Boolean) {
+                Log.i("WebRTCViewModel", "ICE connection receiving change: $p0")
+            }
 
-            override fun onIceGatheringChange(p0: PeerConnection.IceGatheringState?) {}
+            override fun onIceGatheringChange(p0: PeerConnection.IceGatheringState?) {
+                Log.i("WebRTCViewModel", "ICE gathering state: $p0")
+            }
 
             override fun onIceCandidate(candidate: IceCandidate?) {
                 candidate?.let {
@@ -92,7 +100,10 @@ class WebRTCViewModel @Inject constructor(
                 }
             }
 
-            override fun onIceCandidatesRemoved(p0: Array<out IceCandidate>?) {}
+            override fun onIceCandidatesRemoved(p0: Array<out IceCandidate>?) {
+                Log.i("WebRTCViewModel", "ICE candidates removed")
+            }
+
             override fun onAddStream(p0: MediaStream?) {
                 TODO("Not yet implemented")
             }

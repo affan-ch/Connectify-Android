@@ -39,33 +39,25 @@ class MainActivity : ComponentActivity() {
                 MyAppContent()
             }
         }
-
-        // Start Foreground Service
-        startForegroundService()
-
-        // Redirect to Accessibility Settings
-        if (!isAccessibilityServiceEnabled()) {
-            promptAccessibilitySettings()
-        }
+        
+//        // Redirect to Accessibility Settings
+//        if (!isAccessibilityServiceEnabled()) {
+//            promptAccessibilitySettings()
+//        }
     }
 
-    private fun startForegroundService() {
-        val serviceIntent = Intent(this, ForegroundService::class.java)
-        ContextCompat.startForegroundService(this, serviceIntent)
-    }
-
-    private fun isAccessibilityServiceEnabled(): Boolean {
-        val service = ComponentName(this, AccessibilityService::class.java)
-        val enabledServices =
-            Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-        return enabledServices?.contains(service.flattenToString()) == true
-    }
-
-    private fun promptAccessibilitySettings() {
-        Toast.makeText(this, "Please enable Accessibility Service for Clipboard Sync.", Toast.LENGTH_LONG).show()
-        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
-        startActivity(intent)
-    }
+//    private fun isAccessibilityServiceEnabled(): Boolean {
+//        val service = ComponentName(this, AccessibilityService::class.java)
+//        val enabledServices =
+//            Settings.Secure.getString(contentResolver, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+//        return enabledServices?.contains(service.flattenToString()) == true
+//    }
+//
+//    private fun promptAccessibilitySettings() {
+//        Toast.makeText(this, "Please enable Accessibility Service for Clipboard Sync.", Toast.LENGTH_LONG).show()
+//        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+//        startActivity(intent)
+//    }
 }
 
 

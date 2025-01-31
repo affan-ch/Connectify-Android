@@ -1,5 +1,6 @@
 package pk.codehub.connectify.ui.screens
 
+import android.content.Intent
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -28,7 +29,6 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableIntStateOf
@@ -45,6 +45,7 @@ import androidx.compose.ui.text.googlefonts.GoogleFont
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
@@ -55,73 +56,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.serialization.json.Json
 import pk.codehub.connectify.utils.DataStoreManager
 import pk.codehub.connectify.models.Device
-import io.socket.client.IO
-import io.socket.client.Socket
-import kotlinx.coroutines.delay
-import org.json.JSONObject
+import pk.codehub.connectify.services.ForegroundService
 import pk.codehub.connectify.viewmodels.WebRTCViewModel
-import java.net.URISyntaxException
-import pk.codehub.connectify.utils.ApiRoutes
 
-
-@Composable
-fun WebRTC_Manager(viewModel: WebRTCViewModel = hiltViewModel()) {
-    var socket: Socket? = null
-
-    try {
-        socket = IO.socket(ApiRoutes.BASE_URL)
-        Log.i("Socket.io", "Initialized")
-    } catch (e: URISyntaxException) {
-        e.printStackTrace()
-    }
-
-    // Connect to the server
-    socket?.connect()
-
-    val appContext = LocalContext.current.applicationContext
-    val loginToken = DataStoreManager.getValue(appContext, "token", "").collectAsState(initial = "").value
-    val deviceToken = DataStoreManager.getValue(appContext, "deviceToken", "").collectAsState(initial = "").value
-
-
-    // Register the device with the server
-    socket?.emit("register", JSONObject().apply {
-        put("loginToken", loginToken)
-        put("deviceToken", deviceToken)
-    })
-
-    val createdAnswer by viewModel.answer.observeAsState("")
-    var receivedOffer by remember { mutableStateOf<OfferData?>(null) }
-
-
-    // Listen for WebRTC offers from the server
-    socket?.on("webrtc_offer") { args ->
-        Log.d("WebRTC", "Received Offer")
-        val offer = (args[0] as JSONObject).getString("offer")
-        val deviceId = (args[0] as JSONObject).getString("callbackDeviceId")
-
-        Log.d("WebRTC", "Received offer from Device $deviceId: $offer")
-
-        viewModel.setOfferFromJson(offer)
-
-        receivedOffer = OfferData(offer, deviceId)
-    }
-
-    LaunchedEffect(key1 = receivedOffer) {
-        receivedOffer?.let {
-            delay(2000L)
-            socket?.emit("webrtc_answer", JSONObject().apply {
-                put("loginToken", loginToken)
-                put("deviceToken", deviceToken)
-                put("deviceId", it.deviceId)
-                put("answer", createdAnswer)
-            })
-
-            Log.d("WebRTC", "Sent Answer to Device ${it.deviceId}: $createdAnswer")
-        }
-    }
-}
-
-data class OfferData(val offer: String, val deviceId: String)
 
 @Composable
 fun HomeContent(
@@ -159,7 +96,8 @@ fun HomeContent(
 
     Log.d("HomeContent", "Final Device: $device")
 
-    WebRTC_Manager()
+    val serviceIntent = Intent(context, ForegroundService::class.java)
+    ContextCompat.startForegroundService(context, serviceIntent)
 
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
@@ -255,7 +193,6 @@ fun BottomNavigationBar(navController: NavHostController) {
 
     var selectedItemIndex by rememberSaveable { mutableIntStateOf(0) }
 
-
     NavigationBar {
         items.forEachIndexed { index, item ->
             NavigationBarItem(
@@ -294,8 +231,7 @@ fun BottomNavigationBar(navController: NavHostController) {
                         restoreState = true
                     }
                 },
-
-                )
+            )
         }
     }
 }
