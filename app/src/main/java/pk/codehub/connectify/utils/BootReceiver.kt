@@ -11,7 +11,7 @@ class BootReceiver : BroadcastReceiver() {
         if (intent?.action == Intent.ACTION_BOOT_COMPLETED) {
             // Start Foreground Service
             Log.d("BootReceiver", "Starting Foreground Service")
-            context.startForegroundService(Intent(context, ForegroundService::class.java))
+//            context.startForegroundService(Intent(context, ForegroundService::class.java))
         }
     }
 }
