@@ -35,6 +35,11 @@ class WebRTCViewModel @Inject constructor(
 
     private val _sentPackets = MutableLiveData<List<Packet>>()
 
+    // Public method to update state from other classes
+    fun updateState(newState: String) {
+        _state.value = newState
+    }
+
     val allMessages: LiveData<List<Packet>> = MediatorLiveData<List<Packet>>().apply {
         addSource(_receivedPackets) { updateMessages() }
         addSource(_sentPackets) { updateMessages() }

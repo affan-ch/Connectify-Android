@@ -187,5 +187,18 @@ class WebRTCManager(
                 receivedOffer = Offer(offer, deviceId)
             }
         }
+
+        socket?.on("desktop_disconnected"){ args ->
+            val obj = args[0] as JSONObject
+
+            val deviceId = obj.getString("deviceId")
+
+            Log.i("Foreground Service", "Desktop Device Disconnected having ID:${deviceId}")
+
+            viewModel.updateState("disconnected")
+
+
+
+        }
     }
 }

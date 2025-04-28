@@ -17,7 +17,7 @@ class DeviceInfoProvider {
                 val model = Build.MODEL ?: "Unknown"
                 val osVersion = Build.VERSION.RELEASE ?: "Unknown"
                 val deviceUuid = getDeviceUuid(context)
-                val serialNumber = getSerialNumber()
+                val serialNumber = "Unknown"
                 val boardId = Build.BOARD ?: "Unknown"
                 val manufacturer = Build.MANUFACTURER ?: "Unknown"
                 val timezone = TimeZone.getDefault().id
@@ -50,8 +50,5 @@ class DeviceInfoProvider {
             return Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
         }
 
-        private fun getSerialNumber(): String{
-            return "${Build.FINGERPRINT}__${Build.HARDWARE}"
-        }
     }
 }

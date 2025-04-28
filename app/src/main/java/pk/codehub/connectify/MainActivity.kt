@@ -24,6 +24,7 @@ import androidx.navigation.compose.composable
 import pk.codehub.connectify.services.AccessibilityService
 import pk.codehub.connectify.services.ForegroundService
 import pk.codehub.connectify.ui.screens.HomeScreen
+import pk.codehub.connectify.ui.screens.SplashScreen
 import pk.codehub.connectify.ui.screens.TfaVerifyScreen
 import pk.codehub.connectify.utils.DataStoreManager
 import pk.codehub.connectify.utils.TokenManager
@@ -65,70 +66,17 @@ class MainActivity : ComponentActivity() {
 fun MyAppContent() {
     val navController = rememberNavController()
 
-    val appContext = LocalContext.current.applicationContext
-
     CheckNotificationListenerPermission()
 
     // TODO("Implement Splash Screen as Start Destination")
-    NavHost(navController = navController, startDestination = "sign_in") {
+    NavHost(navController = navController, startDestination = "splash_screen") {
+        composable("splash_screen") { SplashScreen(navController)  }
         composable("sign_in") { SignInScreen(navController) }
         composable("sign_up") { SignUpScreen(navController) }
         composable("tfa_verify") { TfaVerifyScreen(navController)  }
         composable("home") { HomeScreen() }
     }
 
-    LaunchedEffect(Unit) {
-        DataStoreManager.getValue(appContext, "token", "").collect { loginToken ->
-            if (loginToken.isNotEmpty()) {
-                val isValid = TokenManager.verifyLoginToken(appContext, loginToken)
-
-                // If login token is invalid, navigate to sign in screen
-                if(!isValid){
-                    navController.navigate("sign_in") {
-                        popUpTo(0) // Clears back stack
-                    }
-                }
-
-                DataStoreManager.getValue(appContext, "deviceToken", "").collect { deviceToken ->
-                    if (deviceToken.isEmpty()) {
-                        val success = TokenManager.registerDevice(appContext, loginToken)
-
-                        if(success){
-                            Log.d("Device Token", "Device Registered Successfully")
-
-                            navController.navigate("home") {
-                                popUpTo(0) // Clears back stack
-                            }
-                        }
-                        else{
-                            navController.navigate("sign_in") {
-                                popUpTo(0) // Clears back stack
-                            }
-                        }
-                    } else {
-                        val success = TokenManager.verifyDeviceToken(appContext, loginToken, deviceToken)
-
-                        if(success){
-                            Log.d("Device Token", "Device Verified Successfully")
-
-                            navController.navigate("home") {
-                                popUpTo(0) // Clears back stack
-                            }
-                        }
-                        else{
-                            navController.navigate("sign_in") {
-                                popUpTo(0) // Clears back stack
-                            }
-                        }
-                    }
-                }
-            } else {
-                navController.navigate("sign_in") {
-                    popUpTo(0) // Clears back stack
-                }
-            }
-        }
-    }
 }
 
 

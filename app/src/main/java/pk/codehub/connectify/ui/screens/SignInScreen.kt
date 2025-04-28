@@ -39,7 +39,7 @@ import pk.codehub.connectify.viewmodels.SignInViewModel
 fun SignInScreen(
     navController: NavController
 ) {
-    var context = LocalContext.current
+    val context = LocalContext.current
     val viewModel: SignInViewModel = viewModel()
     val provider = GoogleFont.Provider(
         providerAuthority = "com.google.android.gms.fonts",
