@@ -85,6 +85,7 @@ fun HomeContent(
         val devicesJson = DataStoreManager.getValue(context, "devices", "").first()
 
         if (devicesJson.isEmpty()) {
+            Log.d("HomeContent", "No devices found in DataStore while rendering home page")
             return@LaunchedEffect
         }
 

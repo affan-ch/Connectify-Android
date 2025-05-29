@@ -183,6 +183,9 @@ class WebRTCManager(
 
                 Log.d("WebRTC", "Received offer from Device $deviceId: $offer")
 
+                // clear previous offer
+//                viewModel.resetWebRTC()
+
                 viewModel.setOfferFromJson(offer)
                 receivedOffer = Offer(offer, deviceId)
             }
@@ -196,9 +199,6 @@ class WebRTCManager(
             Log.i("Foreground Service", "Desktop Device Disconnected having ID:${deviceId}")
 
             viewModel.updateState("disconnected")
-
-
-
         }
     }
 }

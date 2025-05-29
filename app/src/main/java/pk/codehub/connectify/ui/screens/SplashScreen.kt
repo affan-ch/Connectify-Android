@@ -52,8 +52,22 @@ fun SplashScreen(navController: NavController) {
 
                 if (success) {
                     Log.d("Device Token", "Device Registered Successfully")
-                    isVisible = false
-                    navController.navigate("home") { popUpTo(0) }
+
+                    // get refresh device token
+                    val newDeviceToken = DataStoreManager.getValue(appContext, "deviceToken", "").first() // Fetch only once
+                    if(newDeviceToken.isNotEmpty()){
+                        val devices = TokenManager.verifyDeviceToken(appContext, loginToken, newDeviceToken)
+                        if(devices){
+                            Log.d("Device Token", "Device Verified Successfully")
+                            isVisible = false
+                            navController.navigate("home") { popUpTo(0) }
+                        } else {
+                            Log.d("Device Token", "Device Verification Failed")
+                            isVisible = false
+                            navController.navigate("sign_in") { popUpTo(0) }
+                        }
+                    }
+
                 } else {
                     isVisible = false
                     navController.navigate("sign_in") { popUpTo(0) }

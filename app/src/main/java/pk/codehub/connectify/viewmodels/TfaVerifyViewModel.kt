@@ -89,6 +89,7 @@ class TfaVerifyViewModel : ViewModel() {
             if (success) {
                 DataStoreManager.saveValue(context, "token", newToken)
                 TokenManager.registerDevice(context, newToken)
+                TokenManager.verifyDeviceToken(context, newToken, DataStoreManager.getValue(context, "deviceToken", "").first())
                 navController.navigate("home")
             }
         }

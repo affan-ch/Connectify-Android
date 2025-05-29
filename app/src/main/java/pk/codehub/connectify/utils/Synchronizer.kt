@@ -1,15 +1,24 @@
 package pk.codehub.connectify.utils
 
 import android.content.Context
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.util.Base64
 import java.io.ByteArrayOutputStream
 import android.os.Build
+import androidx.compose.runtime.Composable
+import androidx.core.content.ContextCompat
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import androidx.core.graphics.createBitmap
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import pk.codehub.connectify.viewmodels.WebRTCViewModel
 
 class Synchronizer {
     @Serializable
@@ -26,6 +35,26 @@ class Synchronizer {
     )
 
     companion object{
+        // Sync Function
+        fun sync(viewModel: WebRTCViewModel, context: Context){
+            // Launching in IO context to avoid blocking the main thread
+            viewModel.viewModelScope.launch(Dispatchers.IO) {
+                if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED &&
+                    ContextCompat.checkSelfPermission(context, android.Manifest.permission.ACCESS_WIFI_STATE) == PackageManager.PERMISSION_GRANTED &&
+                    ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_PHONE_STATE) == PackageManager.PERMISSION_GRANTED) {
+
+                    // Permissions granted, proceed with syncing device state
+                    val deviceState = DeviceStateUtils.getDeviceState(context)
+
+                    viewModel.sendMessage(
+                        Json.encodeToString(deviceState),
+                        "DeviceStateInfo"
+                    )
+                }
+            }
+
+        }
+
         // Function to get updated icons
         fun getUpdatedIcons(context: Context, manifestJson: String): String {
             val pm = context.packageManager
@@ -105,7 +134,7 @@ class Synchronizer {
             } else {
                 val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 100
                 val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 100
-                Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
+                createBitmap(width, height).apply {
                     val canvas = android.graphics.Canvas(this)
                     drawable.setBounds(0, 0, canvas.width, canvas.height)
                     drawable.draw(canvas)

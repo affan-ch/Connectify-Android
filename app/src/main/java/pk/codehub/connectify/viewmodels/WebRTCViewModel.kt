@@ -13,6 +13,7 @@ import org.json.JSONObject
 import org.webrtc.*
 import pk.codehub.connectify.models.Packet
 import pk.codehub.connectify.models.Sdp
+import pk.codehub.connectify.utils.Synchronizer
 import java.nio.ByteBuffer
 import javax.inject.Inject
 
@@ -38,6 +39,17 @@ class WebRTCViewModel @Inject constructor(
     // Public method to update state from other classes
     fun updateState(newState: String) {
         _state.value = newState
+    }
+
+    // Reset Webrtc
+    fun resetWebRTC() {
+        remotePeer?.dispose()
+        dataChannel?.dispose()
+        peerConnectionFactory?.dispose()
+        remotePeer = null
+        dataChannel = null
+        peerConnectionFactory = null
+        _state.value = "disconnected"
     }
 
     val allMessages: LiveData<List<Packet>> = MediatorLiveData<List<Packet>>().apply {
@@ -66,7 +78,7 @@ class WebRTCViewModel @Inject constructor(
         // Setup ICE servers for connectivity
         val iceServers = listOf(
             PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
-            PeerConnection.IceServer.builder("turn:68.183.132.84:3478?transport=udp")
+            PeerConnection.IceServer.builder("turn:68.183.132.84:3478")
                 .setUsername("myturnserveruser")
                 .setPassword("PaswordOfSomethingScary69")
                 .createIceServer()
@@ -139,6 +151,11 @@ class WebRTCViewModel @Inject constructor(
                     Log.i("WebRTCViewModel", "DataChannel is open and ready to send messages")
                     // update the state to notify the UI
                     _state.postValue("connected")
+
+                    val applicationContext = application.applicationContext
+
+                    // Call Sync function to sync everything
+                    Synchronizer.sync(this@WebRTCViewModel, applicationContext)
                 }
             }
 

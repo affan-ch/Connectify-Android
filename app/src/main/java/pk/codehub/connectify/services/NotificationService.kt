@@ -3,25 +3,19 @@ package pk.codehub.connectify.services
 import android.app.RemoteInput
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
-import android.util.Base64
 import android.util.Log
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import pk.codehub.connectify.models.NotificationAction
 import pk.codehub.connectify.models.Notification
+import pk.codehub.connectify.models.NotificationAction
 import pk.codehub.connectify.viewmodels.WebRTCViewModel
-import java.io.ByteArrayOutputStream
 import javax.inject.Inject
-
 
 @AndroidEntryPoint
 class NotificationService : NotificationListenerService() {
@@ -29,63 +23,81 @@ class NotificationService : NotificationListenerService() {
     @Inject
     lateinit var webRTCViewModel: WebRTCViewModel
 
-//    override fun onCreate() {
-//        super.onCreate()
-//        // Start observing state even before listener is connected
-//        Handler(Looper.getMainLooper()).post {
-//            webRTCViewModel.state.observeForever { newState ->
-//                    // When WebRTC channel opens, push all active notifications
-//                    sendAllActiveNotifications()
-//
-//            }
-//        }
-//    }
-
     override fun onNotificationPosted(sbn: StatusBarNotification) {
-        val payload = createPayloadFromSBN(sbn)
-        val jsonString = Json.encodeToString(payload)
-        webRTCViewModel.sendMessage(jsonString, "Notification:Posted")
+        try {
+            val payload = createPayloadFromSBN(sbn)
+            val jsonString = Json.encodeToString(payload)
+
+            Handler(Looper.getMainLooper()).post {
+                try {
+                    webRTCViewModel.sendMessage(jsonString, "Notification:Posted")
+                } catch (e: Exception) {
+                    Log.e("NotificationService", "Failed to send posted notification", e)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("NotificationService", "Failed to process posted notification", e)
+        }
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification) {
-        val notificationId = sbn.id
-        val notificationKey = sbn.key
+        try {
+            val dismissedPayload = mapOf(
+                "id" to sbn.id,
+                "key" to sbn.key
+            )
 
-        // Log or send via WebRTC
-        val dismissedPayload = mapOf(
-            "id" to notificationId,
-            "key" to notificationKey
-        )
+            val json = Json.encodeToString(dismissedPayload)
 
-        val json = Json.encodeToString(dismissedPayload)
-
-        // Send to peer
-        webRTCViewModel.sendMessage(json, "Notification:Removed")
+            Handler(Looper.getMainLooper()).post {
+                try {
+                    webRTCViewModel.sendMessage(json, "Notification:Removed")
+                } catch (e: Exception) {
+                    Log.e("NotificationService", "Failed to send removed notification", e)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("NotificationService", "Failed to process removed notification", e)
+        }
     }
 
-    private fun sendAllActiveNotifications() {
-        val notifications = activeNotifications?.map { createPayloadFromSBN(it) } ?: emptyList()
+    fun sendAllActiveNotifications() {
+        try {
+            val notifications = activeNotifications?.map { createPayloadFromSBN(it) } ?: emptyList()
+            val json = Json.encodeToString(notifications)
 
-        // Serialize to JSON array
-        val json = Json.encodeToString(notifications)
-
-        // Send to peer
-        webRTCViewModel.sendMessage(json, "Notification:AllActive")
+            Handler(Looper.getMainLooper()).post {
+                try {
+                    webRTCViewModel.sendMessage(json, "Notification:AllActive")
+                } catch (e: Exception) {
+                    Log.e("NotificationService", "Failed to send all active notifications", e)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("NotificationService", "Failed to serialize active notifications", e)
+        }
     }
 
     fun clearNotificationByKey(key: String) {
         try {
             cancelNotification(key)
         } catch (e: Exception) {
-            Log.e("NotificationService", "Failed to cancel notification", e)
+            Log.e("NotificationService", "Failed to cancel notification with key $key", e)
         }
     }
 
     fun performNotificationAction(id: Int, actionIndex: Int, replyText: String? = null) {
-        val sbn = activeNotifications?.firstOrNull { it.id == id } ?: return
-        val action = sbn.notification.actions?.getOrNull(actionIndex) ?: return
-
         try {
+            val sbn = activeNotifications?.firstOrNull { it.id == id } ?: run {
+                Log.w("NotificationService", "Notification with id $id not found")
+                return
+            }
+
+            val action = sbn.notification.actions?.getOrNull(actionIndex) ?: run {
+                Log.w("NotificationService", "Action index $actionIndex not found for notification id $id")
+                return
+            }
+
             if (replyText != null && action.remoteInputs != null) {
                 val fillInIntent = Intent().apply {
                     val bundle = Bundle()
@@ -98,8 +110,9 @@ class NotificationService : NotificationListenerService() {
             } else {
                 action.actionIntent.send()
             }
+
         } catch (e: Exception) {
-            Log.e("NotificationService", "Failed to perform action", e)
+            Log.e("NotificationService", "Failed to perform action on notification $id", e)
         }
     }
 
@@ -123,6 +136,7 @@ class NotificationService : NotificationListenerService() {
             val applicationInfo = packageManager.getApplicationInfo(packageName, 0)
             packageManager.getApplicationLabel(applicationInfo).toString()
         } catch (e: PackageManager.NameNotFoundException) {
+            Log.w("NotificationService", "App name not found for package: $packageName")
             packageName
         }
 
@@ -147,6 +161,4 @@ class NotificationService : NotificationListenerService() {
             groupKey = groupKey
         )
     }
-
-
 }
