@@ -13,5 +13,6 @@ data class Notification(
     val postTime: Long,
     val actions: List<NotificationAction>,
     val isGroup: Boolean,
-    val groupKey: String?
+    val groupKey: String?,
+    val isSummary: Boolean,
 )

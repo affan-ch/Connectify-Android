@@ -1,7 +1,16 @@
 package pk.codehub.connectify.viewmodels
 
+import android.annotation.SuppressLint
 import android.app.Application
+import android.content.ClipData
+import android.content.Context
+import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
+import android.util.Base64
 import android.util.Log
+import androidx.core.graphics.createBitmap
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
@@ -14,9 +23,15 @@ import org.webrtc.*
 import pk.codehub.connectify.models.Packet
 import pk.codehub.connectify.models.Sdp
 import pk.codehub.connectify.utils.Synchronizer
+import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 import javax.inject.Inject
+import android.os.Build
+import pk.codehub.connectify.models.AppIcon
+import android.content.ClipboardManager
 
+
+@SuppressLint("StaticFieldLeak")
 @HiltViewModel
 class WebRTCViewModel @Inject constructor(
     private val application: Application
@@ -25,6 +40,7 @@ class WebRTCViewModel @Inject constructor(
     private var peerConnectionFactory: PeerConnectionFactory? = null
     private var remotePeer: PeerConnection? = null
     private var dataChannel: DataChannel? = null
+    val context: Context = application
 
     private val _answer = MutableLiveData<String>()
     val answer: LiveData<String> = _answer
@@ -43,13 +59,14 @@ class WebRTCViewModel @Inject constructor(
 
     // Reset Webrtc
     fun resetWebRTC() {
+        remotePeer?.close()
         remotePeer?.dispose()
-        dataChannel?.dispose()
-        peerConnectionFactory?.dispose()
         remotePeer = null
+        dataChannel?.dispose()
         dataChannel = null
+        peerConnectionFactory?.dispose()
         peerConnectionFactory = null
-        _state.value = "disconnected"
+        _state.postValue("disconnected")
     }
 
     val allMessages: LiveData<List<Packet>> = MediatorLiveData<List<Packet>>().apply {
@@ -67,7 +84,7 @@ class WebRTCViewModel @Inject constructor(
     }
 
     // Initialize WebRTC PeerConnection
-    private fun setupWebRTC() {
+    fun setupWebRTC() {
         val initializationOptions = PeerConnectionFactory.InitializationOptions.builder(application)
             .createInitializationOptions()
         PeerConnectionFactory.initialize(initializationOptions)
@@ -160,7 +177,7 @@ class WebRTCViewModel @Inject constructor(
             }
 
             override fun onMessage(buffer: DataChannel.Buffer?) {
-                buffer?.let {
+                buffer?.let { it ->
                     val data = ByteArray(it.data.remaining()) // Allocate a byte array with the remaining buffer size
                     it.data.get(data)  // Read buffer into byte array
 
@@ -174,6 +191,63 @@ class WebRTCViewModel @Inject constructor(
                     val timestamp = messageJson.optString("timestamp")
                     val sender = messageJson.optString("sender")
 
+                    if(type == "AppIcon:Request"){
+                        Log.i("WebRTCViewModel", "Received AppIcon:Request")
+
+                        if(content == "" || content == "null" || content == "[]") {
+                            Log.i("WebRTCViewModel", "Empty App Icon List, Requesting all icons")
+                            val pm = context.packageManager
+                            val installedApps = pm.getInstalledApplications(PackageManager.GET_META_DATA)
+
+                            installedApps.forEach { appInfo ->
+                                try {
+                                    val packageName = appInfo.packageName
+                                    val appLabel = pm.getApplicationLabel(appInfo).toString()
+
+                                    val pkgInfo = pm.getPackageInfo(packageName, 0)
+                                    val versionCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                        pkgInfo.longVersionCode.toString()
+                                    } else {
+                                        @Suppress("DEPRECATION")
+                                        pkgInfo.versionCode.toLong().toString()
+                                    }
+
+                                    val icon = try {
+                                        pm.getApplicationIcon(packageName)
+                                    } catch (_: Exception) {
+                                        null
+                                    }
+
+                                    val iconB64 = icon?.let { drawableToBase64(it) } ?: ""
+
+                                    // Build your object to send
+                                    val appData = AppIcon(
+                                        appName = appLabel,
+                                        packageName = packageName,
+                                        packageVersion = versionCode,
+                                        appIconBase64 = iconB64
+                                    )
+
+                                    // Send it as JSON via WebRTC
+                                    sendMessage(
+                                        Json.encodeToString(appData),
+                                        "AppIcon:SinglePackage"
+                                    )
+
+                                } catch (e: Exception) {
+                                    e.printStackTrace() // Log or handle error per app
+                                }
+                            }
+
+                        }
+                    }
+
+                    if(type == "Clipboard"){
+                        Log.i("WebRTCViewModel", "Received Clipboard data")
+                        Log.i("WebRTCViewModel", "Clipboard content: $content")
+
+                        copyToClipboard(context, "clipboard", content)
+                    }
                     Log.d("WebRTCViewModel", "Received: type: $type, content: $content, timestamp: $timestamp, sender: $sender")
 
                     val messageFormatted = Packet(type = type, content = content, timestamp = timestamp, sender = sender)
@@ -182,6 +256,12 @@ class WebRTCViewModel @Inject constructor(
                 }
             }
         })
+    }
+
+    fun copyToClipboard(context: Context, label: String = "clipboard", text: String) {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        val clip = ClipData.newPlainText(label, text)
+        clipboard.setPrimaryClip(clip)
     }
 
     // Set the remote description from the offer received and create an answer
@@ -272,5 +352,24 @@ class WebRTCViewModel @Inject constructor(
         } else {
             Log.i("WebRTCViewModel", "DataChannel is not open")
         }
+    }
+
+    // Function to convert a Drawable to a Base64 string
+    private fun drawableToBase64(drawable: Drawable): String? {
+        val bitmap = if (drawable is BitmapDrawable) {
+            drawable.bitmap
+        } else {
+            val width = drawable.intrinsicWidth.takeIf { it > 0 } ?: 100
+            val height = drawable.intrinsicHeight.takeIf { it > 0 } ?: 100
+            createBitmap(width, height).apply {
+                val canvas = android.graphics.Canvas(this)
+                drawable.setBounds(0, 0, canvas.width, canvas.height)
+                drawable.draw(canvas)
+            }
+        }
+
+        val outputStream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, outputStream)
+        return Base64.encodeToString(outputStream.toByteArray(), Base64.NO_WRAP)
     }
 }

@@ -175,21 +175,46 @@ class WebRTCManager(
 
         // Listen for WebRTC offers from the server
         socket?.on("webrtc_offer") { args ->
-            coroutineScope.launch {
-                Log.d("WebRTC", "Received Offer")
-                val offerJson = args[0] as JSONObject
-                val offer = offerJson.getString("offer")
-                val deviceId = offerJson.getString("callbackDeviceId")
+            Handler(Looper.getMainLooper()).post {
+                viewModel.resetWebRTC()
 
-                Log.d("WebRTC", "Received offer from Device $deviceId: $offer")
+                Handler(Looper.getMainLooper()).postDelayed({
+                    viewModel.setupWebRTC()
 
-                // clear previous offer
-//                viewModel.resetWebRTC()
+                    // After setup, process the offer
+                    coroutineScope.launch(Dispatchers.Main) {
+                        Log.d("WebRTC", "Received Offer")
+                        val offerJson = args[0] as JSONObject
+                        val offer = offerJson.getString("offer")
+                        val deviceId = offerJson.getString("callbackDeviceId")
 
-                viewModel.setOfferFromJson(offer)
-                receivedOffer = Offer(offer, deviceId)
+                        Log.d("WebRTC", "Received offer from Device $deviceId: $offer")
+
+                        viewModel.setOfferFromJson(offer)
+                        receivedOffer = Offer(offer, deviceId)
+                    }
+                }, 300)
             }
         }
+
+        socket?.on("desktop_connected") { args ->
+            val obj = args[0] as JSONObject
+            val deviceId = obj.getString("deviceId")
+
+            Log.i("Foreground Service", "Desktop Device Connected: ID:$deviceId")
+
+            coroutineScope.launch {
+                val loginToken = DataStoreManager.getValue(appContext, "token", "").first()
+                val deviceToken = DataStoreManager.getValue(appContext, "deviceToken", "").first()
+
+                socket?.emit("mobile_connected", JSONObject().apply {
+                    put("desktopDeviceId", deviceId)
+                    put("loginToken", loginToken)
+                    put("deviceToken", deviceToken)
+                })
+            }
+        }
+
 
         socket?.on("desktop_disconnected"){ args ->
             val obj = args[0] as JSONObject

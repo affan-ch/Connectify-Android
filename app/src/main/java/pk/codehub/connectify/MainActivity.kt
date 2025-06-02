@@ -1,6 +1,7 @@
 package pk.codehub.connectify
 
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
@@ -28,6 +29,10 @@ import pk.codehub.connectify.ui.screens.SplashScreen
 import pk.codehub.connectify.ui.screens.TfaVerifyScreen
 import pk.codehub.connectify.utils.DataStoreManager
 import pk.codehub.connectify.utils.TokenManager
+import android.app.NotificationManager
+import android.net.Uri
+import androidx.core.net.toUri
+
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -45,6 +50,23 @@ class MainActivity : ComponentActivity() {
 //        if (!isAccessibilityServiceEnabled()) {
 //            promptAccessibilitySettings()
 //        }
+
+        if(!ensureDndPermission(this)) {
+            Toast.makeText(this, "Please grant Do Not Disturb access to Connectify.", Toast.LENGTH_LONG).show()
+//            val intent = Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+//            startActivity(intent)
+            val intent = Intent(android.provider.Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)
+            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            startActivity(intent)
+        }
+
+        if (!Settings.System.canWrite(this)) {
+            val intent = Intent(Settings.ACTION_MANAGE_WRITE_SETTINGS).apply {
+                data = "package:$packageName".toUri()
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            startActivity(intent)
+        }
     }
 
 //    private fun isAccessibilityServiceEnabled(): Boolean {
@@ -59,6 +81,12 @@ class MainActivity : ComponentActivity() {
 //        val intent = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
 //        startActivity(intent)
 //    }
+
+    private fun ensureDndPermission(context: Context): Boolean {
+        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        return notificationManager.isNotificationPolicyAccessGranted
+    }
+
 }
 
 
